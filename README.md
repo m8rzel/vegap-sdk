@@ -7,13 +7,13 @@ The Vegap SDK makes it easy to interact with any API through Vegap's proxy and t
 ## Installation
 
 ```bash
-npm install @vegap/sdk
+npm install vegap-sdk
 ```
 
 ## Quick Start
 
 ```typescript
-import { init, vegap } from '@vegap/sdk';
+import { init, vegap } from 'vegap-sdk';
 
 // Initialize the SDK (once at app startup)
 init({
