@@ -51,20 +51,26 @@ export class Vegap {
    * Proxy a request through Vegap
    * Automatically handles mapping and transformation
    * 
-   * @param customSlug - The custom slug for the mapping (e.g., "stripe-customers")
+   * @param identifier - Either a custom slug (string) or options object with mappingId
    * @param options - Request options (query params, body, method, etc.)
    *                  Can be a simple object for GET requests, or ProxyOptions for more control
    * @returns The transformed response
    * 
    * @example
    * ```typescript
-   * // GET request with query params (simple object)
+   * // Using custom slug (GET request with query params)
    * const user = await vegap.proxy('stripe-customers', { id: 'cus_123' });
    * 
-   * // POST request with body
+   * // Using custom slug (POST request with body)
    * const customer = await vegap.proxy('stripe-customers', {
    *   method: 'POST',
    *   body: { name: 'John Doe', email: 'john@example.com' }
+   * });
+   * 
+   * // Using mapping ID
+   * const data = await vegap.proxy({
+   *   mappingId: '507f1f77bcf86cd799439011',
+   *   query: { id: 'cus_123' }
    * });
    * 
    * // Request with additional path
@@ -75,22 +81,37 @@ export class Vegap {
    * ```
    */
   async proxy<T = any>(
-    customSlug: string,
-    options: ProxyOptionsInput = {}
+    identifier: string | ProxyOptionsInput,
+    options?: ProxyOptionsInput
   ): Promise<ProxyResponse<T>> {
-    // Normalize options - if it's a simple object without method/body/query/path/headers,
-    // treat it as query params for GET requests
+    // Determine if first parameter is a custom slug or options object
+    let customSlug: string | undefined;
     let normalizedOptions: ProxyOptions;
-    
-    if ('method' in options || 'body' in options || 'query' in options || 'path' in options || 'headers' in options) {
-      // It's already a ProxyOptions object
-      normalizedOptions = options as ProxyOptions;
+
+    if (typeof identifier === 'string') {
+      // First parameter is a custom slug
+      customSlug = identifier;
+      
+      // Normalize options - if it's a simple object without method/body/query/path/headers,
+      // treat it as query params for GET requests
+      if (!options) {
+        normalizedOptions = { method: 'GET' };
+      } else if ('method' in options || 'body' in options || 'query' in options || 'path' in options || 'headers' in options || 'mappingId' in options) {
+        // It's already a ProxyOptions object
+        normalizedOptions = options as ProxyOptions;
+      } else {
+        // It's a simple object - treat as query params for GET
+        normalizedOptions = {
+          query: options as Record<string, string | number | boolean | undefined>,
+          method: 'GET',
+        };
+      }
     } else {
-      // It's a simple object - treat as query params for GET
-      normalizedOptions = {
-        query: options as Record<string, string | number | boolean | undefined>,
-        method: 'GET',
-      };
+      // First parameter is options object (must contain mappingId)
+      normalizedOptions = identifier as ProxyOptions;
+      if (!normalizedOptions.mappingId) {
+        throw new Error('If first parameter is an options object, it must contain mappingId');
+      }
     }
 
     const {
@@ -99,19 +120,33 @@ export class Vegap {
       method = 'GET',
       path,
       headers = {},
+      mappingId,
     } = normalizedOptions;
 
-    // Get company ID (will be inferred from API key if not provided)
-    const companyId = await this.getCompanyId();
-
-    // Build URL
-    let url = `${this.baseUrl}/api/proxy/custom/${companyId}/${customSlug.toLowerCase()}`;
+    // Build URL based on whether we're using custom slug or mapping ID
+    let url: string;
     
-    // Append additional path if provided
-    if (path) {
-      // Remove leading slash from path if present
-      const cleanPath = path.replace(/^\//, '');
-      url += `/${cleanPath}`;
+    if (mappingId) {
+      // Use mapping ID route: /api/proxy/:mappingid
+      url = `${this.baseUrl}/api/proxy/${mappingId}`;
+      
+      // Append additional path if provided
+      if (path) {
+        const cleanPath = path.replace(/^\//, '');
+        url += `/${cleanPath}`;
+      }
+    } else if (customSlug) {
+      // Use custom slug route: /api/proxy/custom/:companyId/:customSlug
+      const companyId = await this.getCompanyId();
+      url = `${this.baseUrl}/api/proxy/custom/${companyId}/${customSlug.toLowerCase()}`;
+      
+      // Append additional path if provided
+      if (path) {
+        const cleanPath = path.replace(/^\//, '');
+        url += `/${cleanPath}`;
+      }
+    } else {
+      throw new Error('Either customSlug (string) or mappingId (in options) must be provided');
     }
 
     // Build query string
@@ -261,7 +296,7 @@ let globalInstance: Vegap | null = null;
  * 
  * @example
  * ```typescript
- * import { init } from '@vegap/sdk';
+ * import { init } from 'vegap-sdk';
  * 
  * init({ apiKey: 'your-api-key', companyId: 'your-company-id' });
  * 
@@ -277,7 +312,7 @@ export function init(config: VegapConfig): void {
  * 
  * @example
  * ```typescript
- * import { createInstance } from '@vegap/sdk';
+ * import { createInstance } from 'vegap-sdk';
  * 
  * const client = createInstance({ apiKey: 'your-api-key', companyId: 'your-company-id' });
  * ```
@@ -305,7 +340,7 @@ function getInstance(): Vegap {
  * 
  * @example
  * ```typescript
- * import { init, vegap } from '@vegap/sdk';
+ * import { init, vegap } from 'vegap-sdk';
  * 
  * init({ apiKey: 'your-api-key', companyId: 'your-company-id' });
  * 
@@ -322,15 +357,21 @@ export const vegap = {
    * 
    * @example
    * ```typescript
-   * // Simple GET request
+   * // Using custom slug
    * const user = await vegap.proxy('stripe-customers', { id: 'cus_123' });
+   * 
+   * // Using mapping ID
+   * const data = await vegap.proxy({
+   *   mappingId: '507f1f77bcf86cd799439011',
+   *   query: { id: 'cus_123' }
+   * });
    * ```
    */
   proxy<T = any>(
-    customSlug: string,
-    options: ProxyOptionsInput = {}
+    identifier: string | ProxyOptionsInput,
+    options?: ProxyOptionsInput
   ): Promise<ProxyResponse<T>> {
-    return getInstance().proxy(customSlug, options);
+    return getInstance().proxy(identifier, options);
   },
 
   /**

@@ -45,7 +45,7 @@ Initialize the global Vegap SDK instance. Call this once at the start of your ap
 
 **Example:**
 ```typescript
-import { init } from '@vegap/sdk';
+import { init } from 'vegap-sdk';
 
 init({ apiKey: 'your-api-key', companyId: 'your-company-id' });
 ```
@@ -60,34 +60,37 @@ Create a new Vegap SDK instance (alternative to using the global instance).
 
 **Example:**
 ```typescript
-import { createInstance } from '@vegap/sdk';
+import { createInstance } from 'vegap-sdk';
 
 const client = createInstance({ apiKey: 'your-api-key', companyId: 'your-company-id' });
 ```
 
-### `proxy(customSlug, options?)`
+### `proxy(identifier, options?)`
 
 Proxy a request through Vegap. Automatically handles mapping and transformation.
 
 **Parameters:**
-- `customSlug` (required): The custom slug for the mapping (e.g., `"stripe-customers"`)
-- `options` (optional): Request options
+- `identifier` (required): Either:
+  - A custom slug string (e.g., `"stripe-customers"`) - uses `/api/proxy/custom/:companyId/:customSlug`
+  - An options object with `mappingId` - uses `/api/proxy/:mappingid`
+- `options` (optional): Request options (only used if identifier is a string)
   - `query`: Query parameters as an object
   - `body`: Request body (for POST, PUT, PATCH)
   - `method`: HTTP method (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`) - default: `GET`
   - `path`: Additional path segments to append
   - `headers`: Additional headers
+  - `mappingId`: Mapping ID (if using options object as first parameter)
 
 **Returns:** `Promise<ProxyResponse<T>>`
 
 **Example:**
 ```typescript
-// GET request with query params
+// Using custom slug - GET request with query params
 const customer = await client.proxy('stripe-customers', { 
   id: 'cus_123' 
 });
 
-// POST request with body
+// Using custom slug - POST request with body
 const newCustomer = await client.proxy('stripe-customers', {
   method: 'POST',
   body: {
@@ -96,10 +99,16 @@ const newCustomer = await client.proxy('stripe-customers', {
   }
 });
 
-// Request with additional path
+// Using custom slug - Request with additional path
 const subscriptions = await client.proxy('stripe-customers', {
   path: 'cus_123/subscriptions',
   query: { limit: 10 }
+});
+
+// Using mapping ID
+const data = await client.proxy({
+  mappingId: '507f1f77bcf86cd799439011',
+  query: { id: 'cus_123' }
 });
 ```
 
@@ -133,7 +142,7 @@ console.log(transformed.success); // true/false
 The SDK is written in TypeScript and includes full type definitions:
 
 ```typescript
-import type { ProxyResponse, TransformResponse } from '@vegap/sdk';
+import type { ProxyResponse, TransformResponse } from 'vegap-sdk';
 
 async function getCustomer(): Promise<ProxyResponse<{ id: string; name: string }>> {
   return await client.proxy('stripe-customers', { id: 'cus_123' });

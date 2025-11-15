@@ -21,23 +21,15 @@ export interface VegapConfig {
 
 /**
  * Options for proxy requests
- * 
- * If you pass a simple object as the second parameter, it will be treated as:
- * - Query parameters for GET/DELETE requests
- * - Body for POST/PUT/PATCH requests
- * 
- * For more control, use the full ProxyOptions object.
  */
 export interface ProxyOptions {
   /**
    * Query parameters to include in the request
-   * If not specified and method is GET/DELETE, the options object itself will be used as query params
    */
   query?: Record<string, string | number | boolean | undefined>;
   
   /**
    * Request body (for POST, PUT, PATCH requests)
-   * If not specified and method is POST/PUT/PATCH, the options object itself will be used as body
    */
   body?: Record<string, any> | string;
   
@@ -49,7 +41,7 @@ export interface ProxyOptions {
   
   /**
    * Additional path segments to append to the proxy endpoint
-   * Example: if customSlug is "stripe-customers" and path is "cus_123", 
+   * Example: if using custom slug "stripe-customers" and path is "cus_123", 
    * the request will be made to /api/proxy/custom/:companyId/stripe-customers/cus_123
    */
   path?: string;
@@ -58,6 +50,12 @@ export interface ProxyOptions {
    * Additional headers to include in the request
    */
   headers?: Record<string, string>;
+  
+  /**
+   * Mapping ID to use instead of custom slug
+   * If provided, uses /api/proxy/:mappingid instead of /api/proxy/custom/:companyId/:customSlug
+   */
+  mappingId?: string;
 }
 
 /**
