@@ -1,0 +1,38 @@
+{
+  "name": "@vegap/sdk",
+  "version": "1.0.0",
+  "description": "Vegap SDK - One line. Every API.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "vegap",
+    "api",
+    "sdk",
+    "proxy",
+    "transform"
+  ],
+  "author": "m.wiskow96@gmail.com",
+  "license": "ISC",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^20.10.6",
+    "typescript": "^5.3.3"
+  }
+}
+
