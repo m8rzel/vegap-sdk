@@ -19,7 +19,7 @@ import { init, vegap } from 'vegap-sdk';
 init({
   apiKey: 'your-api-key',
   companyId: 'your-company-id',
-  baseUrl: 'https://api.vegap.com' // optional, defaults to http://localhost:4000
+  baseUrl: 'https://api.vegap.de' // optional, defaults to https://api.vegap.de
 });
 
 // One line. Every API.
@@ -50,7 +50,7 @@ Initialize the global Vegap SDK instance. Call this once at the start of your ap
 **Parameters:**
 - `config.apiKey` (required): Your Vegap API key
 - `config.companyId` (required): Your company ID
-- `config.baseUrl` (optional): Base URL of the Vegap API server (default: `http://localhost:4000`)
+- `config.baseUrl` (optional): Base URL of the Vegap API server (default: `https://api.vegap.de`)
 
 **Example:**
 ```typescript

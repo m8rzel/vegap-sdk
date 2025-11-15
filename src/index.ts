@@ -36,7 +36,7 @@ export class Vegap {
     }
 
     this.apiKey = config.apiKey;
-    this.baseUrl = config.baseUrl || 'http://localhost:4000';
+    this.baseUrl = config.baseUrl || 'https://api.vegap.de';
     this.companyId = config.companyId;
   }
 

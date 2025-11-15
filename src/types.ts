@@ -9,7 +9,7 @@ export interface VegapConfig {
   
   /**
    * Base URL of the Vegap API server
-   * @default "http://localhost:3001"
+   * @default "https://api.vegap.de"
    */
   baseUrl?: string;
   
