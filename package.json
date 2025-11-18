@@ -1,6 +1,6 @@
 {
   "name": "vegap-sdk",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Vegap SDK - One line. Every API.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

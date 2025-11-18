@@ -5,6 +5,8 @@ import type {
   TransformOptions,
   ProxyResponse,
   TransformResponse,
+  PipelineOptions,
+  PipelineResponse,
   VegapError,
 } from './types.js';
 
@@ -201,6 +203,147 @@ export class Vegap {
   }
 
   /**
+   * Execute a processing pipeline with file or data
+   * 
+   * @param identifier - Either a custom slug (string) or options object with pipelineId
+   * @param options - Pipeline execution options (file, data, headers)
+   * @returns The pipeline execution result
+   * 
+   * @example
+   * ```typescript
+   * // Using custom slug with file upload
+   * const result = await vegap.pipeline('invoice-processor', {
+   *   file: fileInput.files[0]
+   * });
+   * 
+   * // Using custom slug with JSON data
+   * const result = await vegap.pipeline('invoice-processor', {
+   *   data: { invoice_number: 'INV-123', amount: 1000 }
+   * });
+   * 
+   * // Using pipeline ID
+   * const result = await vegap.pipeline({
+   *   pipelineId: '691b353fc86e42ea8b569c8c',
+   *   file: fileInput.files[0]
+   * });
+   * ```
+   */
+  async pipeline<T = any>(
+    identifier: string | PipelineOptions,
+    options?: PipelineOptions
+  ): Promise<PipelineResponse<T>> {
+    // Determine if first parameter is a custom slug or options object
+    let customSlug: string | undefined;
+    let normalizedOptions: PipelineOptions;
+
+    if (typeof identifier === 'string') {
+      // First parameter is a custom slug
+      customSlug = identifier;
+      normalizedOptions = options || {};
+    } else {
+      // First parameter is options object (must contain pipelineId or we'll use custom slug)
+      normalizedOptions = identifier;
+      if (!normalizedOptions.pipelineId && !customSlug) {
+        throw new Error('If first parameter is an options object, it must contain pipelineId, or use custom slug as first parameter');
+      }
+    }
+
+    const {
+      file,
+      data,
+      headers = {},
+      pipelineId,
+    } = normalizedOptions;
+
+    // Validate that either file or data is provided
+    if (!file && !data) {
+      throw new Error('Either file or data must be provided');
+    }
+
+    // Build URL based on whether we're using pipeline ID or custom slug
+    let url: string;
+    
+    if (pipelineId) {
+      // Use pipeline ID route: /api/pipelines/execute/:pipelineId
+      url = `${this.baseUrl}/api/pipelines/execute/${pipelineId}`;
+    } else if (customSlug) {
+      // Use custom slug route: /api/pipelines/custom/:companyId/:slug
+      const companyId = await this.getCompanyId();
+      url = `${this.baseUrl}/api/pipelines/custom/${companyId}/${customSlug.toLowerCase()}`;
+    } else {
+      throw new Error('Either customSlug (string) or pipelineId (in options) must be provided');
+    }
+
+    // Prepare request options
+    const requestOptions: RequestInit = {
+      method: 'POST',
+      headers: {
+        'X-API-Key': this.apiKey,
+        ...headers,
+      },
+    };
+
+    // Handle file upload or JSON data
+    if (file) {
+      // File upload - use FormData
+      const formData = new FormData();
+      
+      // Handle different file types
+      if (file instanceof File || file instanceof Blob) {
+        formData.append('file', file);
+      } else if (typeof Buffer !== 'undefined' && Buffer.isBuffer && Buffer.isBuffer(file)) {
+        // Node.js Buffer - convert to Blob for browser compatibility
+        const blob = new Blob([file]);
+        formData.append('file', blob);
+      } else if (file instanceof Uint8Array || (file as any).constructor?.name === 'Buffer') {
+        // Handle Buffer-like objects
+        const blob = new Blob([file as any]);
+        formData.append('file', blob);
+      } else {
+        throw new Error('Unsupported file type. Use File, Blob, or Buffer.');
+      }
+      
+      // Don't set Content-Type header - browser will set it with boundary
+      requestOptions.body = formData;
+    } else if (data) {
+      // JSON data
+      requestOptions.headers = {
+        ...requestOptions.headers,
+        'Content-Type': 'application/json',
+      };
+      requestOptions.body = JSON.stringify({ data });
+    }
+
+    // Make request
+    const response = await fetch(url, requestOptions);
+
+    // Handle errors
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ 
+        error: `HTTP ${response.status}: ${response.statusText}` 
+      })) as VegapError;
+      throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    // Handle CSV response (for CSV output format)
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('text/csv')) {
+      const csvText = await response.text();
+      return {
+        success: true,
+        job_id: '',
+        result: csvText as any,
+        status: 'completed',
+      };
+    }
+
+    // Parse JSON response
+    const result = await response.json() as PipelineResponse<T>;
+    
+    return result;
+  }
+
+  /**
    * Transform a raw API response using a mapping
    * 
    * @param options - Transform options (mappingId and rawResponse)
@@ -382,6 +525,35 @@ export const vegap = {
   ): Promise<TransformResponse<T>> {
     return getInstance().transform(options);
   },
+
+  /**
+   * Execute a processing pipeline with file or data
+   * 
+   * @example
+   * ```typescript
+   * // Using custom slug with file upload
+   * const result = await vegap.pipeline('invoice-processor', {
+   *   file: fileInput.files[0]
+   * });
+   * 
+   * // Using custom slug with JSON data
+   * const result = await vegap.pipeline('invoice-processor', {
+   *   data: { invoice_number: 'INV-123', amount: 1000 }
+   * });
+   * 
+   * // Using pipeline ID
+   * const result = await vegap.pipeline({
+   *   pipelineId: '691b353fc86e42ea8b569c8c',
+   *   file: fileInput.files[0]
+   * });
+   * ```
+   */
+  pipeline<T = any>(
+    identifier: string | PipelineOptions,
+    options?: PipelineOptions
+  ): Promise<PipelineResponse<T>> {
+    return getInstance().pipeline(identifier, options);
+  },
 };
 
 // Default export
@@ -395,6 +567,8 @@ export type {
   TransformOptions,
   ProxyResponse,
   TransformResponse,
+  PipelineOptions,
+  PipelineResponse,
   VegapError,
 };
 

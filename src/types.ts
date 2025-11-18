@@ -146,6 +146,67 @@ export interface TransformResponse<T = any> {
 }
 
 /**
+ * Options for pipeline execution requests
+ */
+export interface PipelineOptions {
+  /**
+   * File to upload (File, Blob, or Buffer)
+   */
+  file?: File | Blob | Buffer;
+  
+  /**
+   * JSON data to send (alternative to file)
+   */
+  data?: Record<string, any>;
+  
+  /**
+   * Additional headers to include in the request
+   */
+  headers?: Record<string, string>;
+  
+  /**
+   * Pipeline ID to use instead of custom slug
+   * If provided, uses /api/pipelines/execute/:pipelineId instead of /api/pipelines/custom/:companyId/:slug
+   */
+  pipelineId?: string;
+}
+
+/**
+ * Response from a pipeline execution request
+ */
+export interface PipelineResponse<T = any> {
+  /**
+   * Whether the pipeline execution was successful
+   */
+  success: boolean;
+  
+  /**
+   * The job ID for this execution
+   */
+  job_id: string;
+  
+  /**
+   * The processed output (for JSON output format)
+   */
+  result?: T;
+  
+  /**
+   * The processing status
+   */
+  status: string;
+  
+  /**
+   * Processing time in milliseconds
+   */
+  processing_time_ms?: number;
+  
+  /**
+   * Message (for webhook output format)
+   */
+  message?: string;
+}
+
+/**
  * Error response from the API
  */
 export interface VegapError {

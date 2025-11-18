@@ -39,6 +39,12 @@ async function getDataByMappingId(mappingId: string, query: Record<string, any>)
 // Use it
 const user = await getUserData('stripe', 'cus_123');
 console.log(user.data); // Transformed response - vegap handles all the mapping automatically ✨
+
+// Execute a pipeline with file upload
+const result = await vegap.pipeline('invoice-processor', {
+  file: fileInput.files[0]
+});
+console.log(result.result); // Processed output
 ```
 
 ## API Reference
@@ -226,12 +232,89 @@ const transformed2 = await vegap.transform({
 });
 ```
 
+### `pipeline(identifier, options?)`
+
+Execute a processing pipeline with file upload or JSON data. Pipelines process files through a sequence of AI agents.
+
+**Parameters:**
+
+**Option 1: Using Custom Slug**
+- `identifier` (string, required): The custom slug for the pipeline (e.g., `"invoice-processor"`)
+- `options` (required): Pipeline execution options
+  - `file`: File to upload (File, Blob, or Buffer)
+  - `data`: JSON data to send (alternative to file)
+  - `headers`: Additional headers to include
+
+**Option 2: Using Pipeline ID**
+- `identifier` (object, required): Options object containing:
+  - `pipelineId` (string, required): The pipeline ID (MongoDB ObjectId)
+  - `file`: File to upload (File, Blob, or Buffer)
+  - `data`: JSON data to send (alternative to file)
+  - `headers`: Additional headers to include
+
+**Returns:** `Promise<PipelineResponse<T>>`
+
+**Response Structure:**
+```typescript
+{
+  success: boolean;           // Whether execution was successful
+  job_id: string;             // The job ID for this execution
+  result?: T;                 // The processed output (for JSON output format)
+  status: string;             // Processing status
+  processing_time_ms?: number; // Processing time in milliseconds
+  message?: string;           // Message (for webhook output format)
+}
+```
+
+**Examples:**
+
+```typescript
+// ============================================
+// Using Custom Slug (Recommended)
+// ============================================
+
+// Execute pipeline with file upload
+const result = await vegap.pipeline('invoice-processor', {
+  file: fileInput.files[0]
+});
+
+// Execute pipeline with JSON data
+const result2 = await vegap.pipeline('invoice-processor', {
+  data: {
+    invoice_number: 'INV-123',
+    amount: 1000,
+    date: '2024-01-01'
+  }
+});
+
+// ============================================
+// Using Pipeline ID
+// ============================================
+
+// Execute pipeline with file upload using pipeline ID
+const result3 = await vegap.pipeline({
+  pipelineId: '691b353fc86e42ea8b569c8c',
+  file: fileInput.files[0]
+});
+
+// Execute pipeline with JSON data using pipeline ID
+const result4 = await vegap.pipeline({
+  pipelineId: '691b353fc86e42ea8b569c8c',
+  data: { invoice_number: 'INV-123', amount: 1000 }
+});
+```
+
+**When to use which?**
+
+- **Custom Slug**: Use when you have a readable identifier set up in your Vegap dashboard. Easier to read and maintain.
+- **Pipeline ID**: Use when you only have the MongoDB ObjectId, or when you're dynamically working with pipelines.
+
 ## TypeScript Support
 
 The SDK is written in TypeScript and includes full type definitions:
 
 ```typescript
-import type { ProxyResponse, TransformResponse } from 'vegap-sdk';
+import type { ProxyResponse, TransformResponse, PipelineResponse } from 'vegap-sdk';
 
 // Typed proxy response
 interface Customer {
